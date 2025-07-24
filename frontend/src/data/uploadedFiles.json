@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "id": "file_1689234567abc",
+      "name": "sample-document.pdf",
+      "size": 1245678,
+      "type": "application/pdf",
+      "uploadedAt": "2025-07-20T14:23:45.678Z",
+      "filePath": "/local/uploads/1689234567_sample-document.pdf",
+      "processingMode": "offline",
+      "status": "processed"
+    },
+    {
+      "id": "file_1689245678def",
+      "name": "project-notes.txt",
+      "size": 45678,
+      "type": "text/plain",
+      "uploadedAt": "2025-07-21T10:15:30.456Z",
+      "filePath": "/local/uploads/1689245678_project-notes.txt",
+      "processingMode": "offline",
+      "status": "processed"
+    }
+  ]
+}

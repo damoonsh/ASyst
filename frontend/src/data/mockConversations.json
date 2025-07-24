@@ -1,0 +1,92 @@
+{
+  "thread_1689234567abc": {
+    "id": "thread_1689234567abc",
+    "title": "Introduction to AI",
+    "createdAt": "2025-07-20T14:23:45.678Z",
+    "messages": [
+      {
+        "id": "msg_1689234567abc_1",
+        "edits": [
+          {
+            "edit_id": "edit_1689234567abc_1_1",
+            "model_name": "tinyllama:latest",
+            "timestamp": "2025-07-20T14:23:45.678Z",
+            "question": "What is artificial intelligence?",
+            "answer": "Artificial Intelligence (AI) refers to computer systems designed to perform tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding.\n\nAI can be categorized into two main types:\n\n1. Narrow or Weak AI: Systems designed for a specific task (like voice assistants or image recognition)\n2. General or Strong AI: Systems with generalized human cognitive abilities\n\nModern AI applications use techniques like machine learning, where systems learn from data rather than being explicitly programmed for each task."
+          },
+          {
+            "edit_id": "edit_1689234567abc_1_2",
+            "model_name": "tinyllama:latest",
+            "timestamp": "2025-07-20T14:30:12.345Z",
+            "question": "What is artificial intelligence? Can you explain it simply?",
+            "answer": "Artificial Intelligence (AI) refers to computer systems designed to perform tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding.\n\nAI can be categorized into two main types:\n\n1. Narrow or Weak AI: Systems designed for a specific task (like voice assistants or image recognition)\n2. General or Strong AI: Systems with generalized human cognitive abilities\n\nModern AI applications use techniques like machine learning, where systems learn from data rather than being explicitly programmed for each task.\n\nAI is rapidly evolving and becoming more integrated into our daily lives through applications like virtual assistants, recommendation systems, and autonomous vehicles."
+          },
+          {
+            "edit_id": "edit_1689234567abc_1_3",
+            "model_name": "tinyllama:latest",
+            "timestamp": "2025-07-20T15:15:23.456Z",
+            "question": "What is artificial intelligence and what are some ethical considerations?",
+            "answer": "Artificial Intelligence (AI) refers to computer systems designed to perform tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding.\n\nAI can be categorized into two main types:\n\n1. Narrow or Weak AI: Systems designed for a specific task (like voice assistants or image recognition)\n2. General or Strong AI: Systems with generalized human cognitive abilities\n\nModern AI applications use techniques like machine learning, where systems learn from data rather than being explicitly programmed for each task.\n\nAI is rapidly evolving and becoming more integrated into our daily lives through applications like virtual assistants, recommendation systems, and autonomous vehicles.\n\nEthical considerations in AI development include privacy concerns, algorithmic bias, job displacement, and ensuring AI systems are designed to benefit humanity."
+          }
+        ]
+      }
+    ]
+  },
+  "thread_1689245678def": {
+    "id": "thread_1689245678def",
+    "title": "File Processing Options",
+    "createdAt": "2025-07-21T10:15:30.456Z",
+    "messages": [
+      {
+        "id": "msg_1689245678def_1",
+        "edits": [
+          {
+            "edit_id": "edit_1689245678def_1_1",
+            "model_name": "qwen3:0.6b",
+            "timestamp": "2025-07-21T10:15:30.456Z",
+            "question": "Can you explain the difference between online and offline file processing?",
+            "answer": "In our application, there are two ways to process files:\n\n**Offline Processing:**\n- Files are processed locally on your device\n- Only file paths are sent to the API\n- Faster processing and better privacy\n- Ideal for sensitive documents\n\n**Online Processing:**\n- Files are uploaded to the server for processing\n- Requires stable internet connection\n- May provide more advanced processing features\n- Better for complex analysis tasks\n\nYou can switch between these modes in the settings dialog. The default is offline processing for better privacy."
+          }
+        ]
+      }
+    ]
+  },
+  "thread_1689256789ghi": {
+    "id": "thread_1689256789ghi",
+    "title": "Machine Learning Basics",
+    "createdAt": "2025-07-22T09:45:12.345Z",
+    "messages": [
+      {
+        "id": "msg_1689256789ghi_1",
+        "edits": [
+          {
+            "edit_id": "edit_1689256789ghi_1_1",
+            "model_name": "smollm2:360m",
+            "timestamp": "2025-07-22T09:45:12.345Z",
+            "question": "What's the difference between supervised and unsupervised learning?",
+            "answer": "Supervised and unsupervised learning are two fundamental approaches in machine learning:\n\n**Supervised Learning:**\n- Works with labeled data where inputs and desired outputs are provided\n- The algorithm learns to map inputs to outputs based on example pairs\n- Examples: classification (spam detection, image recognition) and regression (price prediction)\n- Requires human effort to label training data\n\n**Unsupervised Learning:**\n- Works with unlabeled data where only inputs are provided\n- The algorithm finds patterns, structures, or relationships in the data\n- Examples: clustering (customer segmentation), dimensionality reduction, and anomaly detection\n- Doesn't require labeled data but results may be harder to validate\n\nThere's also semi-supervised learning (uses both labeled and unlabeled data) and reinforcement learning (learns through trial and error with rewards/penalties)."
+          },
+          {
+            "edit_id": "edit_1689256789ghi_1_2",
+            "model_name": "smollm2:360m",
+            "timestamp": "2025-07-22T09:52:34.567Z",
+            "question": "What's the difference between supervised and unsupervised learning in machine learning?",
+            "answer": "Supervised and unsupervised learning are two fundamental approaches in machine learning:\n\n**Supervised Learning:**\n- Works with labeled data where inputs and desired outputs are provided\n- The algorithm learns to map inputs to outputs based on example pairs\n- Examples: classification (spam detection, image recognition) and regression (price prediction)\n- Requires human effort to label training data\n\n**Unsupervised Learning:**\n- Works with unlabeled data where only inputs are provided\n- The algorithm finds patterns, structures, or relationships in the data\n- Examples: clustering (customer segmentation), dimensionality reduction, and anomaly detection\n- Doesn't require labeled data but results may be harder to validate\n\n**Semi-supervised Learning:**\n- Uses a combination of labeled and unlabeled data\n- Particularly useful when obtaining labeled data is expensive or time-consuming\n- Can achieve good performance with less labeled data\n\n**Reinforcement Learning:**\n- Learns through trial and error with rewards/penalties\n- An agent learns to make decisions by taking actions in an environment\n- Used in robotics, game playing, and autonomous systems"
+          }
+        ]
+      },
+      {
+        "id": "msg_1689256789ghi_2",
+        "edits": [
+          {
+            "edit_id": "edit_1689256789ghi_2_1",
+            "model_name": "smollm2:360m",
+            "timestamp": "2025-07-22T10:12:34.567Z",
+            "question": "What are some common algorithms for supervised learning?",
+            "answer": "Here are some common supervised learning algorithms:\n\n1. **Linear Regression**: Predicts continuous values by finding the best-fitting line through data points\n\n2. **Logistic Regression**: Despite the name, used for binary classification problems\n\n3. **Decision Trees**: Tree-like models that make decisions based on feature values\n\n4. **Random Forest**: Ensemble method that combines multiple decision trees\n\n5. **Support Vector Machines (SVM)**: Finds the optimal hyperplane that separates classes\n\n6. **K-Nearest Neighbors (KNN)**: Classifies based on the majority class of K nearest data points\n\n7. **Neural Networks**: Deep learning models with multiple layers that can learn complex patterns\n\n8. **Naive Bayes**: Probabilistic classifiers based on Bayes' theorem\n\n9. **Gradient Boosting**: Ensemble method that builds trees sequentially to correct errors\n\nEach algorithm has strengths and weaknesses depending on the data characteristics, size, and problem type."
+          }
+        ]
+      }
+    ]
+  }
+}
