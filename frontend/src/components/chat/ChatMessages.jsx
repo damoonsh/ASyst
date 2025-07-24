@@ -7,7 +7,6 @@ function ChatMessages({
   streamingMessage, 
   isLoading, 
   selectedModel,
-  messagesEndRef,
   handleEditMessage
 }) {
   return (
@@ -104,7 +103,7 @@ function ChatMessages({
           </div>
         </div>
       )}
-      <div ref={messagesEndRef} />
+      <div id="messages-end" />
     </div>
   );
 }

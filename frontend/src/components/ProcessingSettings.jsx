@@ -1,37 +1,52 @@
 import { useState, useEffect } from 'react'
 import { FiSettings, FiWifi, FiWifiOff, FiX } from 'react-icons/fi'
 
-function ProcessingSettings({ onSettingsChange, initialSettings = {} }) {
-  const [settings, setSettings] = useState({
-    useOffline: true, // Default to offline as per requirements
-    ...initialSettings
-  })
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+// Create a global variable to store the current settings
+// This avoids React's state management and potential circular dependencies
+window.processingSettings = window.processingSettings || { useOffline: true };
 
-  // Load settings from JSON file on component mount
+function ProcessingSettings() {
+  // Use local state only for UI rendering
+  const [settings, setSettings] = useState(window.processingSettings)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  
+  // Load settings from localStorage on mount
   useEffect(() => {
-    // Import the settings from the JSON file
-    import('../data/processingSettings.json')
-      .then(data => {
-        setSettings(prev => ({ ...prev, ...data }))
-      })
-      .catch(error => {
-        console.error('Failed to load processing settings:', error)
-      })
+    try {
+      const savedSettings = localStorage.getItem('processingSettings')
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings)
+        setSettings(parsedSettings)
+        window.processingSettings = parsedSettings
+      }
+    } catch (error) {
+      console.error('Failed to load processing settings from localStorage:', error)
+    }
   }, [])
 
-  // Notify parent when settings change
-  useEffect(() => {
-    onSettingsChange?.(settings)
-    // In a real application, we would save changes back to the server here
-    console.log('Settings updated:', settings)
-  }, [settings, onSettingsChange])
-
   const handleSettingChange = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
+    const newSettings = {
+      ...settings,
       [key]: value
-    }))
+    }
+    
+    // Update internal state
+    setSettings(newSettings)
+    
+    // Update global variable
+    window.processingSettings = newSettings
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem('processingSettings', JSON.stringify(newSettings))
+    } catch (error) {
+      console.error('Failed to save processing settings to localStorage:', error)
+    }
+    
+    // Only log when user explicitly changes a setting through UI interaction
+    if (key === 'useOffline') {
+      console.log('Processing mode changed to:', value ? 'Offline' : 'Online')
+    }
   }
 
   const openDialog = () => setIsDialogOpen(true)
@@ -101,7 +116,7 @@ function ProcessingSettings({ onSettingsChange, initialSettings = {} }) {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600">
                     <input
@@ -121,7 +136,7 @@ function ProcessingSettings({ onSettingsChange, initialSettings = {} }) {
                       </div>
                     </div>
                   </label>
-                  
+
                   <label className="flex items-center space-x-3 cursor-pointer p-3 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600">
                     <input
                       type="radio"

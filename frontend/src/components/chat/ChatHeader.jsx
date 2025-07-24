@@ -1,18 +1,15 @@
 import React from 'react';
-import { useSession } from '../../context/SessionContext';
 import ProcessingSettings from '../ProcessingSettings';
 
-function ChatHeader({ 
-  selectedModel, 
-  setSelectedModel, 
-  availableModels, 
-  uploadedFiles, 
-  useContext, 
+function ChatHeader({
+  selectedModel,
+  setSelectedModel,
+  availableModels,
+  uploadedFiles,
+  useContext,
   setUseContext,
   apiMode,
-  setApiMode,
-  processingSettings,
-  handleSettingsChange
+  setApiMode
 }) {
   return (
     <div className="p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
@@ -79,7 +76,7 @@ function ChatHeader({
               <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform transform ${apiMode ? 'translate-x-4' : ''}`}></div>
             </div>
           </div>
-          
+
           {/* Context toggle */}
           <div className="flex items-center">
             <label htmlFor="context-toggle" className="mr-2 text-sm text-gray-700 dark:text-gray-300">
@@ -98,12 +95,9 @@ function ChatHeader({
               <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform transform ${useContext ? 'translate-x-4' : ''}`}></div>
             </div>
           </div>
-          
+
           {/* Processing Settings */}
-          <ProcessingSettings
-            onSettingsChange={handleSettingsChange}
-            initialSettings={processingSettings}
-          />
+          <ProcessingSettings />
         </div>
       </div>
     </div>
