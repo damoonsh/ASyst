@@ -3,3 +3,6 @@
 .DS_Store
 ./frontend/node_modules/
 .vscode/
+.kiro/
+**/__pycache__/
+chroma_persist_dir/
