@@ -18,7 +18,7 @@ function ChatMessages({
         </div>
       ) : (
         <>
-          {currentSession?.messages.map((msg, index) => {
+          {currentSession?.messages?.map((msg, index) => {
             // Check if the message has edits (new format from mockConversations.json)
             if (msg.edits && msg.edits.length > 0) {
               return (
@@ -70,10 +70,10 @@ function ChatMessages({
       {streamingMessage && (
         <div className="space-y-2">
           {/* Show the last user message again before the streaming response */}
-          {currentSession?.messages.length > 0 && (
+          {currentSession?.messages?.length > 0 && (
             <MessageBubble 
               message={{
-                ...currentSession.messages[currentSession.messages.length - 1],
+                ...currentSession.messages[currentSession.messages?.length - 1],
                 isUser: true
               }}
               isNewFormat={true}

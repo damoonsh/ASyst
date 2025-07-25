@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import mockApiService from '../services/mockApiService'
+import apiService from '../services/apiService'
 
 const SessionContext = createContext()
 
-// Helper function to generate a unique ID
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
+// Helper function to generate a temporary ID (only used for local state before backend sync)
+const generateTempId = () => {
+  return `temp_${Date.now()}_${Math.random().toString(36).substring(2)}`
 }
 
 export function SessionProvider({ children }) {
@@ -16,23 +16,26 @@ export function SessionProvider({ children }) {
   // Get current session object
   const currentSession = sessions.find(session => session.id === currentSessionId) || null
 
-  // Load sessions from mock API on component mount
+  // Load sessions from API on component mount
   useEffect(() => {
     setIsLoading(true)
 
-    // Load sessions from mock API
-    mockApiService.getConversations()
-      .then(loadedSessions => {
-        setSessions(loadedSessions)
+    // Load thread titles from API
+    apiService.getThreadTitles()
+      .then(threadTitles => {
+        const formattedSessions = apiService.transformThreadTitles(threadTitles).map(session => ({
+          ...session,
+          messages: [] // Initialize with empty messages array
+        }))
+        setSessions(formattedSessions)
 
         // Set current session to the first one if it exists
-        if (loadedSessions.length > 0) {
-          // Use the first session as the current one
-          setCurrentSessionId(loadedSessions[0].id)
+        if (formattedSessions.length > 0) {
+          setCurrentSessionId(formattedSessions[0].id)
         } else {
           // Create a temporary session in memory but don't save it yet
           const tempSession = {
-            id: generateId(),
+            id: generateTempId(),
             title: 'New Chat',
             messages: [],
             createdAt: new Date().toISOString(),
@@ -51,7 +54,7 @@ export function SessionProvider({ children }) {
 
         // Create a temporary session in memory on error
         const tempSession = {
-          id: generateId(),
+          id: generateTempId(),
           title: 'New Chat',
           messages: [],
           createdAt: new Date().toISOString(),
@@ -73,27 +76,48 @@ export function SessionProvider({ children }) {
     }
   }, [currentSessionId])
 
-  // Create a new session - but don't save it to storage until a message is sent
+  // Create a new temporary session - backend thread will be created when first message is sent
   const createSession = (title = 'New Chat', modelName = 'tinyllama:latest') => {
-    // Create a temporary session in memory only
-    const newSession = {
-      id: generateId(),
+    const tempSession = {
+      id: generateTempId(),
       title,
       messages: [],
       createdAt: new Date().toISOString(),
       modelName,
-      isTemporary: true // Mark as temporary until a message is sent
+      isTemporary: true // Will be converted to real thread when first message is sent
     }
 
-    // Add to local state but don't persist yet
-    setSessions(prevSessions => [...prevSessions, newSession])
-    setCurrentSessionId(newSession.id)
-    return Promise.resolve(newSession)
+    // Add to local state
+    setSessions(prevSessions => [...prevSessions, tempSession])
+    setCurrentSessionId(tempSession.id)
+    return Promise.resolve(tempSession)
   }
 
   // Switch to a different session
   const switchSession = (sessionId) => {
     setCurrentSessionId(sessionId)
+    
+    // Load conversation details if it's not a temporary session
+    const session = sessions.find(s => s.id === sessionId)
+    if (session && !session.isTemporary && (!session.messages || session.messages.length === 0)) {
+      // Load the full conversation from the API using sessionId (thread_id from backend)
+      apiService.getConversation(sessionId)
+        .then(conversationData => {
+          const transformedConversation = apiService.transformConversation(conversationData)
+          
+          // Update the session with the loaded messages
+          setSessions(prevSessions =>
+            prevSessions.map(s =>
+              s.id === sessionId
+                ? { ...s, messages: transformedConversation.messages }
+                : s
+            )
+          )
+        })
+        .catch(error => {
+          console.error(`Failed to load conversation ${sessionId}:`, error)
+        })
+    }
   }
 
   // Delete a session
@@ -113,7 +137,7 @@ export function SessionProvider({ children }) {
         } else {
           // Create a new temporary session
           const tempSession = {
-            id: generateId(),
+            id: generateTempId(),
             title: 'New Chat',
             messages: [],
             createdAt: new Date().toISOString(),
@@ -128,72 +152,45 @@ export function SessionProvider({ children }) {
       return
     }
 
-    // For non-temporary sessions, delete from the API
-    mockApiService.deleteConversation(sessionId)
-      .then(() => {
-        setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId))
+    // For non-temporary sessions, we would delete from the API
+    // TODO: Implement delete endpoint in backend API
+    console.warn('Delete functionality not yet implemented for persistent sessions')
+    
+    // For now, just remove from local state
+    setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId))
 
-        // If we're deleting the current session, switch to another one or create a new temporary one
-        if (sessionId === currentSessionId) {
-          const remainingSessions = sessions.filter(session => session.id !== sessionId)
-          if (remainingSessions.length > 0) {
-            setCurrentSessionId(remainingSessions[0].id)
-          } else {
-            // Create a new temporary session
-            const tempSession = {
-              id: generateId(),
-              title: 'New Chat',
-              messages: [],
-              createdAt: new Date().toISOString(),
-              modelName: 'tinyllama:latest',
-              isTemporary: true
-            }
-
-            setSessions([tempSession])
-            setCurrentSessionId(tempSession.id)
-          }
+    // If we're deleting the current session, switch to another one or create a new temporary one
+    if (sessionId === currentSessionId) {
+      const remainingSessions = sessions.filter(session => session.id !== sessionId)
+      if (remainingSessions.length > 0) {
+        setCurrentSessionId(remainingSessions[0].id)
+      } else {
+        // Create a new temporary session
+        const tempSession = {
+          id: generateTempId(),
+          title: 'New Chat',
+          messages: [],
+          createdAt: new Date().toISOString(),
+          modelName: 'tinyllama:latest',
+          isTemporary: true
         }
-      })
-      .catch(error => {
-        console.error('Failed to delete session:', error)
 
-        // Fallback to local deletion if API fails
-        setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId))
-
-        // If we're deleting the current session, switch to another one or create a new one
-        if (sessionId === currentSessionId) {
-          const remainingSessions = sessions.filter(session => session.id !== sessionId)
-          if (remainingSessions.length > 0) {
-            setCurrentSessionId(remainingSessions[0].id)
-          } else {
-            // Create a new temporary session
-            const tempSession = {
-              id: generateId(),
-              title: 'New Chat',
-              messages: [],
-              createdAt: new Date().toISOString(),
-              modelName: 'tinyllama:latest',
-              isTemporary: true
-            }
-
-            setSessions([tempSession])
-            setCurrentSessionId(tempSession.id)
-          }
-        }
-      })
+        setSessions([tempSession])
+        setCurrentSessionId(tempSession.id)
+      }
+    }
   }
 
   // Add a message to the current session
   const addMessage = (content, isUser = true, modelName = null) => {
-    // Create message locally first
-    const messageId = generateId();
+    // Create message locally first - ID will be replaced when synced with backend
     let message;
 
     // Use the new format with question/answer for new messages
     if (isUser) {
       // For user messages, store as question
       message = {
-        id: messageId,
+        id: null, // Will be set when message is created in backend
         question: content,
         timestamp: new Date().toISOString(),
         model_name: modelName
@@ -202,7 +199,7 @@ export function SessionProvider({ children }) {
       // For AI responses, we should have the question from the previous message
       // This branch should rarely be used directly as we now update existing messages
       message = {
-        id: messageId,
+        id: null, // Will be set when message is created in backend
         content, // Keep for backward compatibility
         answer: content,
         timestamp: new Date().toISOString(),
@@ -212,24 +209,16 @@ export function SessionProvider({ children }) {
     }
 
     if (!currentSessionId) {
-      // Create a new session if none exists
+      // Create a new temporary session if none exists
       return createSession().then(newSession => {
         // Add message to local state
         setSessions(prevSessions =>
           prevSessions.map(session =>
             session.id === newSession.id
-              ? { ...session, messages: [...session.messages, message], isTemporary: false }
+              ? { ...session, messages: [...(session.messages || []), message] }
               : session
           )
         )
-
-        // Save the session and message to the API since this is the first message
-        mockApiService.createConversation(newSession.title, newSession.modelName)
-          .then(savedSession => {
-            mockApiService.addMessage(savedSession.id, content, isUser, modelName)
-              .catch(error => console.error('Failed to persist message:', error))
-          })
-          .catch(error => console.error('Failed to persist session:', error))
 
         return message
       })
@@ -244,42 +233,16 @@ export function SessionProvider({ children }) {
         session.id === currentSessionId
           ? {
             ...session,
-            messages: [...session.messages, message],
+            messages: [...(session.messages || []), message],
             isTemporary: false // Mark as permanent once a message is added
           }
           : session
       )
     )
 
-    // If this is the first message in a temporary session, create it in the API
-    if (session?.isTemporary && session.messages.length === 0) {
-      mockApiService.createConversation(session.title, session.modelName)
-        .then(savedSession => {
-          // Update the session ID in our local state
-          setSessions(prevSessions =>
-            prevSessions.map(s =>
-              s.id === currentSessionId
-                ? { ...s, id: savedSession.id, isTemporary: false }
-                : s
-            )
-          )
-          setCurrentSessionId(savedSession.id)
-
-          // Add the message to the newly created session
-          mockApiService.addMessage(savedSession.id, content, isUser, modelName)
-            .catch(error => console.error('Failed to persist message:', error))
-        })
-        .catch(error => {
-          console.error('Failed to persist session:', error)
-          // Still add the message to our local session
-          mockApiService.addMessage(currentSessionId, content, isUser, modelName)
-            .catch(error => console.error('Failed to persist message:', error))
-        })
-    } else {
-      // Just add the message to the existing session
-      mockApiService.addMessage(currentSessionId, content, isUser, modelName)
-        .catch(error => console.error('Failed to persist message:', error))
-    }
+    // Note: The real API persistence will be handled in the ChatArea component
+    // when we have both question and answer to create a complete message
+    console.log('Message added to local state. API persistence will be handled by ChatArea component.')
 
     return Promise.resolve(message)
   }
@@ -302,12 +265,33 @@ export function SessionProvider({ children }) {
               ...session,
               modelName,
               // If updatedMessages is provided, use it, otherwise keep the existing messages
-              ...(updatedMessages !== null ? { messages: updatedMessages } : {})
+              ...(updatedMessages !== null ? { messages: updatedMessages } : {}),
+              // Mark as non-temporary if we're updating with messages from the API
+              ...(updatedMessages !== null ? { isTemporary: false } : {})
             }
             : session
         )
       )
     }
+  }
+
+  // Convert temporary session to backend session
+  const convertTemporarySession = (oldSessionId, newThreadData) => {
+    setSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === oldSessionId
+          ? {
+            ...session,
+            id: newThreadData.thread_id,
+            title: newThreadData.title,
+            createdAt: newThreadData.started_at,
+            isTemporary: false
+          }
+          : session
+      )
+    )
+    setCurrentSessionId(newThreadData.thread_id)
+    return newThreadData.thread_id
   }
 
   return (
@@ -320,6 +304,7 @@ export function SessionProvider({ children }) {
       deleteSession,
       addMessage,
       updateSessionModel,
+      convertTemporarySession,
       isLoading
     }}>
       {children}

@@ -63,7 +63,10 @@ function ChatHeader({
             <label htmlFor="api-mode-toggle" className="mr-2 text-sm text-gray-700 dark:text-gray-300">
               API Mode
             </label>
-            <div className="relative inline-block w-10 align-middle select-none">
+            <div 
+              className="relative inline-block w-10 align-middle select-none cursor-pointer"
+              onClick={() => setApiMode(!apiMode)}
+            >
               <input
                 type="checkbox"
                 name="api-mode-toggle"
@@ -82,7 +85,10 @@ function ChatHeader({
             <label htmlFor="context-toggle" className="mr-2 text-sm text-gray-700 dark:text-gray-300">
               Use Context
             </label>
-            <div className="relative inline-block w-10 align-middle select-none">
+            <div 
+              className="relative inline-block w-10 align-middle select-none cursor-pointer"
+              onClick={() => setUseContext(!useContext)}
+            >
               <input
                 type="checkbox"
                 name="context-toggle"
