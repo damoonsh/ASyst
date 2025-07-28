@@ -6,3 +6,4 @@
 .kiro/
 **/__pycache__/
 chroma_persist_dir/
+.gradio

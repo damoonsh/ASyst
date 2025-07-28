@@ -2,12 +2,15 @@ import React from 'react';
 import MessageBubble from './MessageBubble';
 import ConversationMessage from './ConversationMessage';
 
-function ChatMessages({ 
-  currentSession, 
-  streamingMessage, 
-  isLoading, 
+function ChatMessages({
+  currentSession,
+  streamingMessage,
+  isLoading,
   selectedModel,
-  handleEditMessage
+  handleEditMessage,
+  tempUserMessage,
+  editingMessageId,
+  editingMessageText
 }) {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
@@ -22,30 +25,35 @@ function ChatMessages({
             // Check if the message has edits (new format from mockConversations.json)
             if (msg.edits && msg.edits.length > 0) {
               return (
-                <ConversationMessage 
+                <ConversationMessage
                   key={msg.id || index}
                   message={msg}
                   handleEditMessage={handleEditMessage}
+                  isBeingEdited={editingMessageId === msg.id}
+                  editingText={editingMessageId === msg.id ? editingMessageText : null}
+                  isGeneratingResponse={editingMessageId === msg.id && isLoading}
+                  streamingMessage={editingMessageId === msg.id ? streamingMessage : null}
+                  selectedModel={selectedModel}
                 />
               );
-            } 
+            }
             // Handle legacy format (for backward compatibility)
             else {
               const isNewFormat = msg.question !== undefined;
-              
+
               if (isNewFormat) {
                 // Legacy new format with question-answer pairs
                 return (
                   <div key={msg.id || index} className="space-y-2">
                     {/* Question (user message) */}
-                    <MessageBubble 
+                    <MessageBubble
                       message={{ ...msg, isUser: true }}
                       isNewFormat={true}
                       onEditMessage={handleEditMessage}
                     />
-                    
+
                     {/* Answer (model response) */}
-                    <MessageBubble 
+                    <MessageBubble
                       message={{ ...msg, isUser: false }}
                       isNewFormat={true}
                     />
@@ -54,7 +62,7 @@ function ChatMessages({
               } else {
                 // Old format
                 return (
-                  <MessageBubble 
+                  <MessageBubble
                     key={msg.id || index}
                     message={msg}
                     isNewFormat={false}
@@ -66,30 +74,37 @@ function ChatMessages({
         </>
       )}
 
-      {/* Streaming message */}
-      {streamingMessage && (
-        <div className="space-y-2">
-          {/* Show the last user message again before the streaming response */}
-          {currentSession?.messages?.length > 0 && (
-            <MessageBubble 
-              message={{
-                ...currentSession.messages[currentSession.messages?.length - 1],
-                isUser: true
-              }}
-              isNewFormat={true}
-              onEditMessage={handleEditMessage}
-            />
-          )}
-          {/* Show the streaming response */}
-          <MessageBubble 
-            message={{
-              answer: streamingMessage,
-              timestamp: new Date().toISOString(),
-              model_name: selectedModel,
-              isUser: false
-            }}
-            isNewFormat={true}
-          />
+      {/* Show temporary user message during streaming (but not when editing) */}
+      {tempUserMessage && !editingMessageId && (
+        <div className="flex justify-end">
+          <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-3 shadow-sm bg-primary-100 dark:bg-primary-900/30 text-gray-800 dark:text-gray-100">
+            <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
+              <span>You</span>
+              <span>{new Date(tempUserMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div className="whitespace-pre-wrap break-words">
+              {tempUserMessage.question}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Streaming message - only show when not editing (editing messages handle their own streaming) */}
+      {streamingMessage && !editingMessageId && (
+        <div className="flex justify-start">
+          <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-3 shadow-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
+            {/* Message header */}
+            <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
+              <span>{selectedModel}</span>
+              <span>Generating...</span>
+            </div>
+
+            {/* Streaming content */}
+            <div className="whitespace-pre-wrap break-words">
+              {streamingMessage}
+              <span className="animate-pulse">▋</span>
+            </div>
+          </div>
         </div>
       )}
 

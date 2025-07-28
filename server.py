@@ -12,6 +12,7 @@ app = FastAPI(title="RAG PDF Question Answering API")
 AVAILABLE_LLM_MODELS = [
     "tinyllama:latest",
     "qwen3:0.6b",
+    "qwen3:0.6b",
     "smollm2:360m",
 ]
 

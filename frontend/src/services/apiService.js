@@ -90,9 +90,10 @@ const apiService = {
    * @param {string} question - The question text
    * @param {string} answer - The answer text
    * @param {string} model - The model used
+   * @param {boolean} firstMessage - Whether this is the first message in the thread
    * @returns {Promise} Promise that resolves to the created message with backend-generated IDs
    */
-  createMessage: async (threadId, question, answer, model) => {
+  createMessage: async (threadId, question, answer, model, firstMessage = false) => {
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${threadId}/`, {
         method: 'POST',
@@ -102,7 +103,8 @@ const apiService = {
         body: JSON.stringify({
           question,
           answer,
-          model
+          model,
+          firstMessage
         })
       })
       return await handleResponse(response)
@@ -173,6 +175,176 @@ const apiService = {
           answer: edit.answer
         }))
       }))
+    }
+  },
+
+  /**
+   * Call LLM endpoint for generating responses
+   * @param {string} question - The question to ask the LLM
+   * @param {string} model - The model to use for generation
+   * @returns {Promise<ReadableStream>} Promise that resolves to a readable stream
+   */
+  callLLM: async (question, model) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/llm_call`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question,
+          model
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail?.message || errorData.detail || `HTTP ${response.status}`)
+      }
+
+      return response.body
+    } catch (error) {
+      console.error('Failed to call LLM:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Process streaming LLM response
+   * @param {ReadableStream} stream - The response stream
+   * @param {function} onChunk - Callback for each chunk
+   * @param {function} onComplete - Callback when complete
+   * @param {function} onError - Callback for errors
+   */
+  processLLMStream: async (stream, onChunk, onComplete, onError) => {
+    try {
+      const reader = stream.getReader()
+      const decoder = new TextDecoder()
+      let fullResponse = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.error) {
+                onError(new Error(data.error))
+                return
+              }
+              if (data.content) {
+                fullResponse += data.content
+                onChunk(data.content)
+              }
+            } catch (parseError) {
+              // Skip malformed JSON lines
+              console.warn('Failed to parse streaming data:', parseError)
+            }
+          }
+        }
+      }
+
+      onComplete(fullResponse)
+    } catch (error) {
+      onError(error)
+    }
+  },
+
+  /**
+   * Call RAG endpoint for context-aware responses
+   * @param {string} question - The question to ask the RAG system
+   * @param {string} model - The model to use for generation
+   * @param {File|string} pdfFile - PDF File object to upload or path string
+   * @returns {Promise<ReadableStream>} Promise that resolves to a readable stream
+   */
+  callRAG: async (question, model, pdfFile = null) => {
+    try {
+      // Use FormData to handle file uploads
+      const formData = new FormData()
+      formData.append('question', question)
+      formData.append('model', model)
+      
+      if (pdfFile) {
+        if (pdfFile instanceof File) {
+          // If it's a File object, upload it
+          formData.append('pdf_file', pdfFile)
+        } else {
+          // If it's a string, treat it as a path
+          formData.append('pdf_path', pdfFile)
+        }
+      }
+
+      const response = await fetch(`${API_BASE_URL}/rag/`, {
+        method: 'POST',
+        body: formData // Don't set Content-Type header, let browser set it for FormData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail?.message || errorData.detail || `HTTP ${response.status}`)
+      }
+
+      return response.body
+    } catch (error) {
+      console.error('Failed to call RAG:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Process streaming RAG response
+   * @param {ReadableStream} stream - The response stream
+   * @param {function} onChunk - Callback for each chunk
+   * @param {function} onComplete - Callback when complete
+   * @param {function} onError - Callback for errors
+   */
+  processRAGStream: async (stream, onChunk, onComplete, onError) => {
+    try {
+      const reader = stream.getReader()
+      const decoder = new TextDecoder()
+      let fullResponse = ''
+      let contextUsed = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              if (data.error) {
+                onError(new Error(data.error))
+                return
+              }
+              if (data.content) {
+                fullResponse += data.content
+                onChunk(data.content)
+              }
+              if (data.context_used !== undefined) {
+                contextUsed = data.context_used
+              }
+            } catch (parseError) {
+              // Skip malformed JSON lines
+              console.warn('Failed to parse streaming data:', parseError)
+            }
+          }
+        }
+      }
+
+      onComplete(fullResponse, contextUsed)
+    } catch (error) {
+      onError(error)
     }
   },
 

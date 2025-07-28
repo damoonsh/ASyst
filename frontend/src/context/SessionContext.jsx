@@ -87,8 +87,8 @@ export function SessionProvider({ children }) {
       isTemporary: true // Will be converted to real thread when first message is sent
     }
 
-    // Add to local state
-    setSessions(prevSessions => [...prevSessions, tempSession])
+    // Add to local state at the beginning (top of list)
+    setSessions(prevSessions => [tempSession, ...prevSessions])
     setCurrentSessionId(tempSession.id)
     return Promise.resolve(tempSession)
   }
@@ -258,8 +258,8 @@ export function SessionProvider({ children }) {
     if (sessionToUpdate && 
         (sessionToUpdate.modelName !== modelName || updatedMessages !== null)) {
       
-      setSessions(prevSessions =>
-        prevSessions.map(session =>
+      setSessions(prevSessions => {
+        return prevSessions.map(session =>
           session.id === sessionId
             ? {
               ...session,
@@ -271,7 +271,7 @@ export function SessionProvider({ children }) {
             }
             : session
         )
-      )
+      })
     }
   }
 
@@ -294,6 +294,43 @@ export function SessionProvider({ children }) {
     return newThreadData.thread_id
   }
 
+  // Update a specific session's title
+  const updateSessionTitle = (sessionId, newTitle) => {
+    setSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === sessionId
+          ? { ...session, title: newTitle }
+          : session
+      )
+    )
+  }
+
+  // Refresh thread titles from API (useful after title generation)
+  const refreshThreadTitles = async () => {
+    try {
+      const threadTitles = await apiService.getThreadTitles()
+      const formattedSessions = apiService.transformThreadTitles(threadTitles).map(session => {
+        // Preserve existing messages and temporary status
+        const existingSession = sessions.find(s => s.id === session.id)
+        return {
+          ...session,
+          messages: existingSession?.messages || [],
+          isTemporary: existingSession?.isTemporary || false
+        }
+      })
+      
+      // Add any temporary sessions that aren't in the API response
+      const tempSessions = sessions.filter(s => s.isTemporary)
+      const allSessions = [...tempSessions, ...formattedSessions]
+      
+      setSessions(allSessions)
+      return allSessions
+    } catch (error) {
+      console.error('Failed to refresh thread titles:', error)
+      throw error
+    }
+  }
+
   return (
     <SessionContext.Provider value={{
       sessions,
@@ -305,6 +342,8 @@ export function SessionProvider({ children }) {
       addMessage,
       updateSessionModel,
       convertTemporarySession,
+      updateSessionTitle,
+      refreshThreadTitles,
       isLoading
     }}>
       {children}

@@ -1,15 +1,20 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncIterator, Optional
 from pydantic import BaseModel, Field
 import logging
 import uuid
 from datetime import datetime
+import json
+import tempfile
+import os
 
 from database import get_db, create_tables, engine
 from models import Thread, ThreadTitle, Conversation
+from rag import RAG
 
 
 # Pydantic models for request validation
@@ -18,6 +23,7 @@ class CreateMessageRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=10000, description="The question text")
     answer: str = Field(..., min_length=1, max_length=50000, description="The answer text")
     model: str = Field(..., min_length=1, max_length=100, description="The model used to generate the answer")
+    firstMessage: bool = Field(default=False, description="Whether this is the first message in the thread")
 
 
 class CreateEditRequest(BaseModel):
@@ -27,9 +33,25 @@ class CreateEditRequest(BaseModel):
     model: str = Field(..., min_length=1, max_length=100, description="The model used to generate the edited answer")
 
 
+class LLMRequest(BaseModel):
+    """Request model for LLM call endpoint."""
+    question: str = Field(..., min_length=1, max_length=10000, description="The question text")
+    model: str = Field(..., min_length=1, max_length=100, description="The model to use for generating the response")
+
+
+class RAGRequest(BaseModel):
+    """Request model for RAG context endpoint."""
+    question: str = Field(..., min_length=1, max_length=10000, description="The question text")
+    model: str = Field(..., min_length=1, max_length=100, description="The model to use for generating the response")
+    pdf_path: Optional[str] = Field(None, description="Optional path to PDF file to ingest before processing the question")
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize RAG instance
+rag_instance = RAG()
 
 
 @asynccontextmanager
@@ -447,6 +469,69 @@ async def create_message(
         db.commit()
         db.refresh(conversation)
         
+        # Generate and update thread title automatically if this is the first message
+        # Use a separate database session to avoid affecting the main transaction
+        if request.firstMessage:
+            from database import get_db_session
+            title_db = None
+            
+            try:
+                title_db = get_db_session()
+                
+                # Load the model for title generation
+                rag_instance.load_model(request.model)
+                
+                # Generate title using the question
+                title_chunks = []
+                async for chunk in rag_instance.generate_question(request.question):
+                    title_chunks.append(chunk)
+                
+                # Combine chunks and clean up the title
+                generated_title = "".join(title_chunks).strip()
+                
+                # Clean up the title extensively
+                # Remove thinking tags and content
+                if "<think>" in generated_title:
+                    # Extract content after </think> tag
+                    parts = generated_title.split("</think>")
+                    if len(parts) > 1:
+                        generated_title = parts[-1].strip()
+                    else:
+                        generated_title = generated_title.replace("<think>", "").strip()
+                
+                # Remove any remaining XML-like tags
+                import re
+                generated_title = re.sub(r'<[^>]+>', '', generated_title)
+                
+                # Remove quotes and extra whitespace
+                generated_title = generated_title.replace('"', '').replace("'", "").strip()
+                
+                # Limit to reasonable title length (much less than 500 chars)
+                if len(generated_title) > 100:
+                    generated_title = generated_title[:97] + "..."
+                
+                # Fallback to default if generation failed or is empty
+                if not generated_title or len(generated_title.strip()) == 0:
+                    generated_title = f"Conversation {thread_id[:8]}"
+                
+                # Update the thread title using separate session
+                thread_title = title_db.query(ThreadTitle).filter(ThreadTitle.thread_id == thread_id).first()
+                if thread_title:
+                    thread_title.title = generated_title
+                    title_db.commit()
+                    logger.info(f"Generated and updated title for thread {thread_id}: {generated_title}")
+                else:
+                    logger.warning(f"Thread title not found for thread {thread_id}")
+                
+            except Exception as e:
+                # Don't fail the message creation if title generation fails
+                logger.error(f"Failed to generate title for thread {thread_id}: {e}")
+                if title_db:
+                    title_db.rollback()
+            finally:
+                if title_db:
+                    title_db.close()
+        
         # Format response
         response = {
             "thread_id": thread_id,
@@ -568,6 +653,172 @@ async def create_message_edit(
             detail={
                 "error": "Failed to create message edit",
                 "message_id": message_id,
+                "message": str(e)
+            }
+        )
+
+
+@app.post("/llm_call")
+async def llm_call(request: LLMRequest) -> StreamingResponse:
+    """
+    Generate LLM response for a given question using the specified model.
+    
+    This endpoint uses the RAG system to generate responses without document context.
+    Returns a streaming response for real-time UI updates.
+    
+    Requirements: 1.1, 1.3, 6.1, 6.2
+    """
+    try:
+        # Load the specified model
+        rag_instance.load_model(request.model)
+        logger.info(f"Loaded model {request.model} for LLM call")
+        
+        async def generate_response() -> AsyncIterator[str]:
+            """Generate streaming response chunks."""
+            try:
+                async for chunk in rag_instance.answer(request.question):
+                    # Format each chunk as JSON for consistent frontend parsing
+                    yield f"data: {json.dumps({'content': chunk})}\n\n"
+            except Exception as e:
+                logger.error(f"Error during response generation: {e}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        
+        return StreamingResponse(
+            generate_response(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to process LLM call: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to process LLM call",
+                "message": str(e)
+            }
+        )
+
+
+@app.post("/rag/")
+async def rag_call(
+    question: str = Form(...),
+    model: str = Form(...),
+    pdf_file: Optional[UploadFile] = File(None),
+    pdf_path: Optional[str] = Form(None)
+) -> StreamingResponse:
+    """
+    Generate RAG-enhanced response for a given question using document context.
+    
+    This endpoint uses the RAG system to generate context-aware responses using
+    documents stored in ChromaDB. Falls back to regular LLM response if no
+    documents are available.
+    
+    If pdf_path is provided, the PDF will be ingested into the vector database
+    before processing the question, allowing for immediate context-aware responses.
+    
+    Requirements: 1.3, 4.1, 4.2, 4.3
+    """
+    try:
+        # Load the specified model
+        rag_instance.load_model(model)
+        logger.info(f"Loaded model {model} for RAG call")
+        
+        # Handle PDF ingestion - either from uploaded file or existing path
+        if pdf_file:
+            # Handle uploaded PDF file
+            try:
+                logger.info(f"Processing uploaded PDF file: {pdf_file.filename}")
+                
+                # Create a temporary file to store the uploaded PDF
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+                    # Read and write the uploaded file content
+                    content = await pdf_file.read()
+                    temp_file.write(content)
+                    temp_file_path = temp_file.name
+                
+                # Ingest the PDF from the temporary file
+                rag_instance.ingest_pdf(temp_file_path)
+                logger.info(f"Successfully ingested uploaded PDF: {pdf_file.filename}")
+                
+                # Clean up the temporary file
+                os.unlink(temp_file_path)
+                
+            except Exception as e:
+                logger.error(f"Failed to ingest uploaded PDF {pdf_file.filename}: {e}")
+                # Clean up temp file if it exists
+                if 'temp_file_path' in locals():
+                    try:
+                        os.unlink(temp_file_path)
+                    except:
+                        pass
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "Failed to ingest uploaded PDF",
+                        "filename": pdf_file.filename,
+                        "message": str(e)
+                    }
+                )
+        elif pdf_path:
+            # Handle PDF from existing file path
+            try:
+                logger.info(f"Ingesting PDF from path: {pdf_path}")
+                rag_instance.ingest_pdf(pdf_path)
+                logger.info(f"Successfully ingested PDF: {pdf_path}")
+            except Exception as e:
+                logger.error(f"Failed to ingest PDF {pdf_path}: {e}")
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "Failed to ingest PDF",
+                        "pdf_path": pdf_path,
+                        "message": str(e)
+                    }
+                )
+        
+        async def generate_response() -> AsyncIterator[str]:
+            """Generate streaming RAG response chunks."""
+            try:
+                # Check if vectorstore is available and has documents
+                if rag_instance.vectorstore is None or rag_instance.retriever is None:
+                    logger.info("No documents available in ChromaDB, falling back to regular LLM response")
+                    # Fall back to regular LLM response when no documents are available
+                    async for chunk in rag_instance.answer(question):
+                        yield f"data: {json.dumps({'content': chunk, 'context_used': False})}\n\n"
+                else:
+                    # Use RAG context-aware response
+                    logger.info("Using RAG context-aware response with document context")
+                    async for chunk in rag_instance.context_answer(question):
+                        yield f"data: {json.dumps({'content': chunk, 'context_used': True})}\n\n"
+                        
+            except RuntimeError as e:
+                # Handle specific RAG errors (no documents, model not loaded)
+                logger.warning(f"RAG error, falling back to regular response: {e}")
+                async for chunk in rag_instance.answer(question):
+                    yield f"data: {json.dumps({'content': chunk, 'context_used': False})}\n\n"
+            except Exception as e:
+                logger.error(f"Error during RAG response generation: {e}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        
+        return StreamingResponse(
+            generate_response(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to process RAG call: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Failed to process RAG call",
                 "message": str(e)
             }
         )

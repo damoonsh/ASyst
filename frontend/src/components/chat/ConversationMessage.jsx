@@ -1,9 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiEdit2, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
-function ConversationMessage({ message, handleEditMessage }) {
+function ConversationMessage({ 
+  message, 
+  handleEditMessage, 
+  isBeingEdited = false, 
+  editingText = null, 
+  isGeneratingResponse = false, 
+  streamingMessage = null,
+  selectedModel = null
+}) {
   const [currentEditIndex, setCurrentEditIndex] = useState(message.edits.length - 1);
   const currentEdit = message.edits[currentEditIndex];
+  
+  // When editing starts, always show the latest edit
+  useEffect(() => {
+    if (isBeingEdited) {
+      setCurrentEditIndex(message.edits.length - 1);
+    }
+  }, [isBeingEdited, message.edits.length]);
+  
+  // If being edited, show the editing text for the question
+  const displayQuestion = isBeingEdited && editingText ? editingText : currentEdit.question;
+  
+  // If generating response, show streaming message or loading, otherwise show current answer
+  const displayAnswer = isGeneratingResponse 
+    ? (streamingMessage || "Generating response...")
+    : currentEdit.answer;
   const containerRef = useRef(null);
   const touchStartX = useRef(null);
   const touchEndX = useRef(null);
@@ -70,8 +93,8 @@ function ConversationMessage({ message, handleEditMessage }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Edit navigation controls (only shown if there are multiple edits) */}
-      {message.edits.length > 1 && (
+      {/* Edit navigation controls (only shown if there are multiple edits and not being edited) */}
+      {message.edits.length > 1 && !isBeingEdited && (
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
           <div className="flex items-center">
             <span>Edit {currentEditIndex + 1} of {message.edits.length}</span>
@@ -105,9 +128,14 @@ function ConversationMessage({ message, handleEditMessage }) {
             <span>You</span>
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => handleEditMessage(message.id, currentEdit.question)}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
+                onClick={() => !isBeingEdited && handleEditMessage(message.id, currentEdit.question)}
+                className={`p-1 rounded-full transition-colors ${
+                  isBeingEdited 
+                    ? 'text-gray-400 cursor-not-allowed' 
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
                 aria-label="Edit message"
+                disabled={isBeingEdited}
               >
                 <FiEdit2 size={12} />
               </button>
@@ -117,7 +145,7 @@ function ConversationMessage({ message, handleEditMessage }) {
           
           {/* Question content */}
           <div className="whitespace-pre-wrap break-words">
-            {currentEdit.question}
+            {displayQuestion}
           </div>
         </div>
       </div>
@@ -127,13 +155,16 @@ function ConversationMessage({ message, handleEditMessage }) {
         <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-3 shadow-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
           {/* Message header */}
           <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
-            <span>{currentEdit.model_name}</span>
-            <span>{formattedTime}</span>
+            <span>{isGeneratingResponse && selectedModel ? selectedModel : currentEdit.model_name}</span>
+            <span>{isGeneratingResponse ? "Generating..." : formattedTime}</span>
           </div>
           
           {/* Answer content */}
           <div className="whitespace-pre-wrap break-words">
-            {currentEdit.answer}
+            {displayAnswer}
+            {isGeneratingResponse && streamingMessage && (
+              <span className="animate-pulse">▋</span>
+            )}
           </div>
         </div>
       </div>

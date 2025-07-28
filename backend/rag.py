@@ -43,6 +43,10 @@ class RAG:
         # Lazily create the Ollama Chat model from LangChain integration
         self.llm = ChatOllama(model=model_name, temperature=0)
         
+    async def generate_question(self, question: str):
+        async for chunk in self.llm.astream(f'write a maximum 6 word title for this question: {question[:100]}'):
+            yield chunk.content
+
     async def answer(self, question: str):
         async for chunk in self.llm.astream(question):
             yield chunk.content
