@@ -123,7 +123,7 @@ INSERT INTO thread_titles (thread_id, title) VALUES
 INSERT INTO conversations (thread_id, message_id, edit_id, question, answer, created_at, model) VALUES
     ('thread-001', 'msg-001', 'edit-001', 
      'How do I develop compelling characters?', 
-     'Create characters with clear motivations, flaws, and backstories. Give them unique voices and conflicting desires to drive the plot forward.', 
+     '<think> The user is asking about character development, which is a fundamental aspect of creative writing. I should provide practical, actionable advice that covers the key elements of compelling characters. Let me think about what makes characters memorable and engaging - they need depth, motivation, flaws, and growth potential. </think>Create characters with clear motivations, flaws, and backstories. Give them unique voices and conflicting desires to drive the plot forward.', 
      '2024-01-15 10:31:00', 'qwen2.5-coder:0.5b'),
     ('thread-001', 'msg-001', 'edit-002', 
      'How do I develop compelling characters with depth and authenticity?', 
@@ -131,7 +131,7 @@ INSERT INTO conversations (thread_id, message_id, edit_id, question, answer, cre
      '2024-01-15 10:32:30', 'tinyllama:latest'),
     ('thread-001', 'msg-002', 'edit-001', 
      'What about plot structure?', 
-     'Use the three-act structure: Setup (introduce characters and conflict), Confrontation (rising action and obstacles), Resolution (climax and conclusion).', 
+     '<think> Now they''re asking about plot structure, which is another crucial element of storytelling. I should explain the most common and effective structure - the three-act structure - in a clear and concise way that they can immediately apply to their writing. </think>Use the three-act structure: Setup (introduce characters and conflict), Confrontation (rising action and obstacles), Resolution (climax and conclusion).', 
      '2024-01-15 10:35:00', 'qwen3:0.6b'),
     ('thread-001', 'msg-002', 'edit-002', 
      'What are different plot structures I can use?', 
@@ -146,7 +146,7 @@ INSERT INTO conversations (thread_id, message_id, edit_id, question, answer, cre
      '2024-01-16 14:21:00', 'tinyllama:latest'),
     ('thread-002', 'msg-001', 'edit-002', 
      'What are some quick weeknight dinner ideas that are healthy and budget-friendly?', 
-     'Quick healthy dinners: 1) Vegetable stir-fry with tofu and brown rice, 2) Sheet pan chicken with roasted vegetables, 3) Lentil curry with naan, 4) Pasta with seasonal vegetables and olive oil, 5) Black bean quesadillas with avocado, 6) Egg fried rice with frozen vegetables, 7) Chickpea and spinach curry. Prep ingredients on weekends to save time.', 
+     '<think> This is a great question about practical cooking. They want meals that are quick (for busy weeknights), healthy (nutritious), and budget-friendly (affordable). I should provide a variety of options that meet all three criteria, and maybe add a practical tip about meal prep to make weeknight cooking even easier. </think>Quick healthy dinners: 1) Vegetable stir-fry with tofu and brown rice, 2) Sheet pan chicken with roasted vegetables, 3) Lentil curry with naan, 4) Pasta with seasonal vegetables and olive oil, 5) Black bean quesadillas with avocado, 6) Egg fried rice with frozen vegetables, 7) Chickpea and spinach curry. Prep ingredients on weekends to save time.', 
      '2024-01-16 14:23:45', 'qwen2.5-coder:0.5b'),
     ('thread-002', 'msg-002', 'edit-001', 
      'How do I improve my knife skills?', 
@@ -154,14 +154,14 @@ INSERT INTO conversations (thread_id, message_id, edit_id, question, answer, cre
      '2024-01-16 14:25:00', 'smollm2:360m'),
     ('thread-002', 'msg-003', 'edit-001', 
      'What spices should every kitchen have?', 
-     'Essential spices: salt, black pepper, garlic powder, paprika, cumin, oregano, thyme, and red pepper flakes. These cover most cuisines.', 
+     '<think> This is about building a basic spice collection. I should focus on versatile spices that appear in many different cuisines and cooking styles. Salt and pepper are obvious, but I should include spices that can transform simple ingredients into flavorful dishes across various cooking traditions. </think>Essential spices: salt, black pepper, garlic powder, paprika, cumin, oregano, thyme, and red pepper flakes. These cover most cuisines.', 
      '2024-01-16 14:27:30', 'qwen3:0.6b');
 
 -- Thread 3: Travel Planning & Photography
 INSERT INTO conversations (thread_id, message_id, edit_id, question, answer, created_at, model) VALUES
     ('thread-003', 'msg-001', 'edit-001', 
      'How do I plan a budget-friendly trip?', 
-     'Book flights early, stay in hostels or Airbnb, eat local street food, use public transport, and look for free activities like hiking or museums.', 
+     '<think> Budget travel is a popular topic and there are many strategies to save money while traveling. I should cover the main expense categories: transportation, accommodation, food, and activities. Let me provide practical tips that can significantly reduce costs without sacrificing the travel experience. </think>Book flights early, stay in hostels or Airbnb, eat local street food, use public transport, and look for free activities like hiking or museums.', 
      '2024-01-17 09:16:00', 'qwen3:0.6b'),
     ('thread-003', 'msg-001', 'edit-002', 
      'How do I plan a comprehensive budget-friendly trip?', 
@@ -173,7 +173,7 @@ INSERT INTO conversations (thread_id, message_id, edit_id, question, answer, cre
      '2024-01-17 09:20:00', 'tinyllama:latest'),
     ('thread-003', 'msg-002', 'edit-002', 
      'What are comprehensive travel photography tips for beginners?', 
-     'Travel photography essentials: 1) Camera settings: Aperture priority (A/Av mode), shoot RAW+JPEG, ISO 100-800 for daylight, 2) Composition: Rule of thirds, leading lines, framing, 3) Golden hour shooting (sunrise/sunset), 4) Pack light: one versatile lens, extra batteries, memory cards, 5) Research locations beforehand, 6) Respect local customs and ask permission for portraits, 7) Backup photos daily, 8) Tell stories through your images, not just landmarks.', 
+     '<think> This is a comprehensive question about travel photography for beginners. I need to cover both technical aspects (camera settings, equipment) and creative aspects (composition, storytelling). I should also include practical travel-specific advice like packing light and respecting local customs. Let me organize this into clear categories that beginners can follow. </think>Travel photography essentials: 1) Camera settings: Aperture priority (A/Av mode), shoot RAW+JPEG, ISO 100-800 for daylight, 2) Composition: Rule of thirds, leading lines, framing, 3) Golden hour shooting (sunrise/sunset), 4) Pack light: one versatile lens, extra batteries, memory cards, 5) Research locations beforehand, 6) Respect local customs and ask permission for portraits, 7) Backup photos daily, 8) Tell stories through your images, not just landmarks.', 
      '2024-01-17 09:22:45', 'qwen2.5-coder:0.5b');
 
 

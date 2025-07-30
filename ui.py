@@ -7,6 +7,7 @@ AVAILABLE_LLM_MODELS = [
     "tinyllama:latest",
     "qwen3:0.6b",
     "smollm2:360m",
+    "qwen2.5-coder:0.5b"
 ]
 
 # Initialize RAG object
@@ -52,6 +53,7 @@ async def process(pdf, question, llm_choice):
     thinking_content = ""
     answer_content = ""
     thinking_visible = False
+    logistic_content = ""
     
     async for chunk in answer_question_with_llm(pdf.name if pdf else None, question, llm_choice):
         if "<think>" in chunk and "</think>" in chunk:
@@ -63,12 +65,14 @@ async def process(pdf, question, llm_choice):
                 thinking_content = ""  # Clear thinking content if no valid thinking
                 thinking_visible = False
             answer_content = f"### Answer\n\n{answer}" if answer else ""
+        elif 'Loading model:' in chunk or 'Ingesting PDF:' in chunk:
+            logistic_content = chunk
         else:
             # If no thinking tags, treat chunk as answer content
             answer_content += chunk + "\n"
             thinking_visible = False  # Hide thinking accordion if no thinking tags
         
-        yield gr.update(visible=thinking_visible), "", thinking_content, answer_content
+        yield gr.update(visible=thinking_visible), "", thinking_content, answer_content, gr.update(value=logistic_content, visible=bool(logistic_content != ""))
 
 def clear_thinking():
     """Clear the thinking and answer display"""
@@ -83,7 +87,7 @@ def reset_rag_system():
 
 with gr.Blocks(css="""
     .thinking-container {
-        max-height: 400px;
+        max-height: 800px;
         overflow-y: auto;
         border: 1px solid #4a4a4a;
         border-radius: 8px;
@@ -145,7 +149,8 @@ with gr.Blocks(css="""
                     elem_classes=["thinking-container"]
                 )
         
-        with gr.Column(scale=1):            
+        with gr.Column(scale=1):         
+            notif = gr.Textbox(visible=False)   
             answer_content = gr.Markdown(
                 value="", 
                 visible=True,
@@ -167,7 +172,7 @@ with gr.Blocks(css="""
     submit_btn.click(
         fn=process,
         inputs=[pdf_input, question_input, llm_dropdown],
-        outputs=[thinking, question_input, thinking_content, answer_content]
+        outputs=[thinking, question_input, thinking_content, answer_content, notif]
     )
 
     question_input.submit(
@@ -177,4 +182,4 @@ with gr.Blocks(css="""
     )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)

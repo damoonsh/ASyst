@@ -24,8 +24,11 @@ export default {
       },
       animation: {
         'bounce-slow': 'bounce 1.5s infinite',
+        'gradient-shift': 'gradient-shift 3s ease-in-out infinite',
       }
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 }

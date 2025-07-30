@@ -42,9 +42,10 @@ const simulateTyping = (text, onChunk, onComplete) => {
 
 // Available models for UI testing
 const mockModels = [
+  { id: "smollm2:360m", name: "SmoLLM2 360M" },
   { id: "tinyllama:latest", name: "TinyLlama" },
   { id: "qwen3:0.6b", name: "Qwen 0.6B" },
-  { id: "smollm2:360m", name: "SmoLLM2 360M" }
+  { id: "qwen2.5-coder:0.5b", name: "Qwen2.5-Coder" }
 ];
 
 /**

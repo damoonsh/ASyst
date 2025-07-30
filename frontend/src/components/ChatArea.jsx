@@ -11,9 +11,10 @@ function ChatArea() {
   const { currentSession, addMessage, updateSessionModel, convertTemporarySession, updateSessionTitle } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [availableModels, setAvailableModels] = useState([
+    { id: "smollm2:360m", name: "SmoLLM2" },
     { id: "tinyllama:latest", name: "TinyLlama" },
     { id: "qwen3:0.6b", name: "Qwen 0.6B" },
-    { id: "smollm2:360m", name: "SmoLLM2 360M" },
+    { id: "qwen2.5-coder:0.5b", name: "Qwen2.5-Coder" }
   ])
   const [selectedModel, setSelectedModel] = useState(availableModels[0].id)
   const [uploadedFiles, setUploadedFiles] = useState([])
@@ -57,7 +58,7 @@ function ChatArea() {
         isTemporary: currentSession.isTemporary,
         messagesCount: currentSession.messages?.length || 0
       })
-      
+
       // If we're in the middle of loading and the session changes unexpectedly, log it
       if (isLoading) {
         console.warn('Session changed while loading - this might cause issues!')
@@ -75,7 +76,7 @@ function ChatArea() {
     // Set loading state and store the current user message for display during streaming
     setIsLoading(true)
     setStreamingMessage("")
-    
+
     // Store the user message temporarily for display during streaming
     setTempUserMessage({
       question: message,
@@ -89,19 +90,19 @@ function ChatArea() {
         // Handle thread creation if needed
         let threadId = currentSession.id
         let actualSessionId = currentSession.id
-        
+
         if (currentSession.isTemporary) {
           // Create a new thread first
           const newThread = await apiService.createThread()
           threadId = newThread.thread_id
-          
+
           // Convert temporary session to use backend-generated thread_id
           console.log('Converting temporary session:', {
             oldId: currentSession.id,
             newThreadId: newThread.thread_id,
             newTitle: newThread.title
           })
-          
+
           const newSessionId = convertTemporarySession(currentSession.id, newThread)
           actualSessionId = newSessionId
         }
@@ -114,11 +115,11 @@ function ChatArea() {
         if (hasPDFs) {
           // Use RAG endpoint when PDFs are available
           console.log('Using RAG endpoint due to PDF files:', uploadedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf')).map(f => f.name))
-          
+
           // Use the original File object if available, otherwise fall back to path/filename
           const firstPDF = uploadedFiles.find(file => file.name.toLowerCase().endsWith('.pdf'))
           const pdfFile = firstPDF ? (firstPDF.originalFile || firstPDF.path || firstPDF.name) : null
-          
+
           stream = await apiService.callRAG(message, selectedModel, pdfFile)
           processStreamFunction = apiService.processRAGStream
         } else {
@@ -136,7 +137,7 @@ function ChatArea() {
             setStreamingMessage(prev => prev + chunk)
           },
           // On complete callback
-          async (fullResponse, contextUsed = false) => {
+          async (fullResponse, contextUsed = false, thinking = null) => {
             // Determine if this is the first message in the thread
             // Only true if the session was temporary (meaning this is the very first message)
             const isFirstMessage = currentSession.isTemporary
@@ -170,14 +171,14 @@ function ChatArea() {
               contextUsed: contextUsed || false,
               endpointUsed: hasPDFs ? 'RAG' : 'LLM'
             })
-            
+
             // Update the session with the new messages and title
             updateSessionModel(actualSessionId, selectedModel, transformedConversation.messages)
             updateSessionTitle(actualSessionId, transformedConversation.title)
 
             setIsLoading(false)
             setStreamingMessage("")
-            
+
             // Keep temp message visible for a moment to ensure smooth transition
             setTimeout(() => {
               setTempUserMessage(null)
@@ -359,7 +360,7 @@ function ChatArea() {
             console.log('Using RAG endpoint for edit due to PDF files')
             const firstPDF = uploadedFiles.find(file => file.name.toLowerCase().endsWith('.pdf'))
             const pdfFile = firstPDF ? (firstPDF.originalFile || firstPDF.path || firstPDF.name) : null
-            
+
             stream = await apiService.callRAG(updatedMessage, selectedModel, pdfFile)
             processStreamFunction = apiService.processRAGStream
           } else {
@@ -377,7 +378,7 @@ function ChatArea() {
               setStreamingMessage(prev => prev + chunk)
             },
             // On complete callback
-            async (fullResponse, contextUsed = false) => {
+            async (fullResponse, contextUsed = false, thinking = null) => {
               // Create a new edit with the updated question and new answer
               await apiService.createMessageEdit(
                 messageToEdit.id,

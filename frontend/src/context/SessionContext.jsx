@@ -96,7 +96,7 @@ export function SessionProvider({ children }) {
   // Switch to a different session
   const switchSession = (sessionId) => {
     setCurrentSessionId(sessionId)
-    
+
     // Load conversation details if it's not a temporary session
     const session = sessions.find(s => s.id === sessionId)
     if (session && !session.isTemporary && (!session.messages || session.messages.length === 0)) {
@@ -104,7 +104,7 @@ export function SessionProvider({ children }) {
       apiService.getConversation(sessionId)
         .then(conversationData => {
           const transformedConversation = apiService.transformConversation(conversationData)
-          
+
           // Update the session with the loaded messages
           setSessions(prevSessions =>
             prevSessions.map(s =>
@@ -155,7 +155,7 @@ export function SessionProvider({ children }) {
     // For non-temporary sessions, we would delete from the API
     // TODO: Implement delete endpoint in backend API
     console.warn('Delete functionality not yet implemented for persistent sessions')
-    
+
     // For now, just remove from local state
     setSessions(prevSessions => prevSessions.filter(session => session.id !== sessionId))
 
@@ -251,13 +251,13 @@ export function SessionProvider({ children }) {
   const updateSessionModel = (sessionId, modelName, updatedMessages = null) => {
     // Check if the session exists and if the model name is different
     const sessionToUpdate = sessions.find(s => s.id === sessionId)
-    
+
     // Only update if the session exists and either:
     // 1. The model name is different, or
     // 2. We have new messages to update
-    if (sessionToUpdate && 
-        (sessionToUpdate.modelName !== modelName || updatedMessages !== null)) {
-      
+    if (sessionToUpdate &&
+      (sessionToUpdate.modelName !== modelName || updatedMessages !== null)) {
+
       setSessions(prevSessions => {
         return prevSessions.map(session =>
           session.id === sessionId
@@ -318,11 +318,11 @@ export function SessionProvider({ children }) {
           isTemporary: existingSession?.isTemporary || false
         }
       })
-      
+
       // Add any temporary sessions that aren't in the API response
       const tempSessions = sessions.filter(s => s.isTemporary)
       const allSessions = [...tempSessions, ...formattedSessions]
-      
+
       setSessions(allSessions)
       return allSessions
     } catch (error) {

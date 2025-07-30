@@ -1,6 +1,10 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { dark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import MessageBubble from './MessageBubble';
 import ConversationMessage from './ConversationMessage';
+import ThinkingWidget from './ThinkingWidget';
 
 function ChatMessages({
   currentSession,
@@ -90,23 +94,83 @@ function ChatMessages({
       )}
 
       {/* Streaming message - only show when not editing (editing messages handle their own streaming) */}
-      {streamingMessage && !editingMessageId && (
-        <div className="flex justify-start">
-          <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-3 shadow-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
-            {/* Message header */}
-            <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
-              <span>{selectedModel}</span>
-              <span>Generating...</span>
-            </div>
+      {streamingMessage && !editingMessageId && (() => {
+        // Process streaming message to separate thinking content from response
+        const processStreamingContent = (content) => {
+          // Look for thinking content at the beginning
+          const thinkMatch = content.match(/^<think>\s*(.*?)\s*<\/think>/s);
+          if (thinkMatch) {
+            const thinkingContent = thinkMatch[1].trim();
+            const responseContent = content.replace(/^<think>\s*.*?\s*<\/think>/s, '').trim();
+            return { thinkingContent, responseContent };
+          }
+          
+          // Check if we're still in the middle of thinking content
+          const openThinkMatch = content.match(/^<think>\s*(.*?)$/s);
+          if (openThinkMatch) {
+            return { thinkingContent: openThinkMatch[1].trim(), responseContent: '' };
+          }
+          
+          return { thinkingContent: null, responseContent: content };
+        };
 
-            {/* Streaming content */}
-            <div className="whitespace-pre-wrap break-words">
-              {streamingMessage}
-              <span className="animate-pulse">▋</span>
-            </div>
-          </div>
-        </div>
-      )}
+        const { thinkingContent, responseContent } = processStreamingContent(streamingMessage);
+
+        return (
+          <>
+            {/* Thinking widget for streaming thinking content */}
+            {thinkingContent && (
+              <div className="flex justify-start mb-1">
+                <ThinkingWidget 
+                  thinkingContent={thinkingContent} 
+                  isStreaming={true}
+                />
+              </div>
+            )}
+
+            {/* Streaming response content */}
+            {responseContent && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-3 shadow-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
+                  {/* Message header */}
+                  <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span>{selectedModel}</span>
+                    <span>Generating...</span>
+                  </div>
+
+                  {/* Streaming content */}
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || '')
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={dark}
+                              language={match[1]}
+                              PreTag="div"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          )
+                        }
+                      }}
+                    >
+                      {responseContent}
+                    </ReactMarkdown>
+                    <span className="animate-pulse">▋</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Loading indicator (only shown when not streaming) */}
       {isLoading && !streamingMessage && (

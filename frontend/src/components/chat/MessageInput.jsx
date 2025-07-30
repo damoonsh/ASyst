@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FiSend, FiPaperclip, FiX, FiCheck } from 'react-icons/fi'
 
 function MessageInput({ 
@@ -11,17 +11,41 @@ function MessageInput({
   onCancelEdit
 }) {
   const [message, setMessage] = useState(initialMessage)
+  const textareaRef = useRef(null)
   
+  // Auto-resize textarea function
+  const autoResize = () => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'
+    }
+  }
+
   // Update message when initialMessage changes (for editing mode)
   useEffect(() => {
     setMessage(initialMessage)
+    // Auto-resize after setting initial message
+    setTimeout(autoResize, 0)
   }, [initialMessage])
+
+  // Auto-resize when component mounts
+  useEffect(() => {
+    autoResize()
+  }, [])
 
   const handleSendMessage = () => {
     if (!message.trim() || isLoading) return
 
     onSendMessage(message)
     setMessage('')
+    // Reset textarea height after sending
+    setTimeout(autoResize, 0)
+  }
+
+  const handleMessageChange = (e) => {
+    setMessage(e.target.value)
+    autoResize()
   }
 
   const handleKeyDown = (e) => {
@@ -63,8 +87,9 @@ function MessageInput({
         )}
 
         <textarea
+          ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
           placeholder={isEditing ? "Edit your message..." : "Type your message..."}
           className={`flex-1 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:border-transparent ${
@@ -73,7 +98,7 @@ function MessageInput({
               : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-primary-500'
           }`}
           rows={1}
-          style={{ minHeight: '44px', maxHeight: '200px' }}
+          style={{ minHeight: '44px', maxHeight: '200px', height: '44px' }}
           autoFocus={isEditing}
         />
 

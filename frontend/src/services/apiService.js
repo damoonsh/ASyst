@@ -167,13 +167,18 @@ const apiService = {
       createdAt: apiConversation.started_at,
       messages: apiConversation.messages.map(message => ({
         id: message.message_id,
-        edits: message.edits.map(edit => ({
-          edit_id: edit.edit_id,
-          model_name: edit.model,
-          timestamp: edit.created_at,
-          question: edit.question,
-          answer: edit.answer
-        }))
+        edits: message.edits.map(edit => {
+          // Process thinking content from the answer
+          const processed = apiService.processThinking(edit.answer);
+          return {
+            edit_id: edit.edit_id,
+            model_name: edit.model,
+            timestamp: edit.created_at,
+            question: edit.question,
+            answer: processed.content,
+            thinking: processed.thinking
+          };
+        })
       }))
     }
   },
@@ -207,6 +212,23 @@ const apiService = {
       console.error('Failed to call LLM:', error)
       throw error
     }
+  },
+
+  /**
+   * Process thinking content from response
+   * @param {string} content - The full response content
+   * @returns {Object} Object with thinking and clean content
+   */
+  processThinking: (content) => {
+    // Look for <think> </think> tokens (with spaces) at the beginning of content
+    const thinkMatch = content.match(/^<think>\s*(.*?)\s*<\/think>/s)
+    if (thinkMatch) {
+      return {
+        thinking: thinkMatch[1].trim(),
+        content: content.replace(/^<think>\s*.*?\s*<\/think>/s, '').trim()
+      }
+    }
+    return { thinking: null, content }
   },
 
   /**
@@ -250,7 +272,9 @@ const apiService = {
         }
       }
 
-      onComplete(fullResponse)
+      // Process thinking content and return both thinking and clean content
+      const processed = apiService.processThinking(fullResponse)
+      onComplete(fullResponse, processed.thinking)
     } catch (error) {
       onError(error)
     }
@@ -342,7 +366,9 @@ const apiService = {
         }
       }
 
-      onComplete(fullResponse, contextUsed)
+      // Process thinking content and return both thinking and clean content
+      const processed = apiService.processThinking(fullResponse)
+      onComplete(fullResponse, contextUsed, processed.thinking)
     } catch (error) {
       onError(error)
     }
