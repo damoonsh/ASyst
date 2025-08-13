@@ -7,7 +7,7 @@ import ChatMessages from './chat/ChatMessages'
 import apiService from '../services/apiService'
 import mockApiService from '../services/mockApiService'
 
-function ChatArea() {
+function ChatArea({ useContext, setUseContext }) {
   const { currentSession, addMessage, updateSessionModel, convertTemporarySession, updateSessionTitle } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [availableModels, setAvailableModels] = useState([
@@ -19,7 +19,6 @@ function ChatArea() {
   const [selectedModel, setSelectedModel] = useState(availableModels[0].id)
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [isProcessing, setIsProcessing] = useState(false)
-  const [useContext, setUseContext] = useState(true)
   const [streamingMessage, setStreamingMessage] = useState("")
   const [apiMode, setApiMode] = useState(true) // Default to real API mode
   const [tempUserMessage, setTempUserMessage] = useState(null)
@@ -464,16 +463,9 @@ function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 h-full">
-      {/* Header with model selector and controls */}
+      {/* Header with file upload status */}
       <ChatHeader
-        selectedModel={selectedModel}
-        setSelectedModel={setSelectedModel}
-        availableModels={availableModels}
         uploadedFiles={uploadedFiles}
-        useContext={useContext}
-        setUseContext={setUseContext}
-        apiMode={apiMode}
-        setApiMode={setApiMode}
       />
 
       {/* Chat messages area */}
@@ -499,6 +491,12 @@ function ChatArea() {
             hasFiles={false}
             isEditing={true}
             onCancelEdit={handleCancelEdit}
+            onFileUpload={handleFileUpload}
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            availableModels={availableModels}
+            useContext={useContext}
+            setUseContext={setUseContext}
           />
         ) : (
           <MessageInput
@@ -506,6 +504,12 @@ function ChatArea() {
             isLoading={isLoading}
             onToggleFileUpload={() => setShowFileUploadDialog(true)}
             hasFiles={uploadedFiles.length > 0}
+            onFileUpload={handleFileUpload}
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            availableModels={availableModels}
+            useContext={useContext}
+            setUseContext={setUseContext}
           />
         )}
       </div>

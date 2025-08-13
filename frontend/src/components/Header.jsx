@@ -1,5 +1,6 @@
 import { useTheme } from '../context/ThemeContext'
 import { FiSun, FiMoon, FiMenu, FiInfo } from 'react-icons/fi'
+import ProcessingSettings from './ProcessingSettings'
 
 function Header() {
   const { theme, toggleTheme } = useTheme()
@@ -19,7 +20,10 @@ function Header() {
           </h1>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
+          {/* Processing Settings */}
+          <ProcessingSettings />
+
           <button 
             className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             aria-label="Information"
