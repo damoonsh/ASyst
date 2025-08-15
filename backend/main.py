@@ -24,6 +24,7 @@ class CreateMessageRequest(BaseModel):
     answer: str = Field(..., min_length=1, max_length=50000, description="The answer text")
     model: str = Field(..., min_length=1, max_length=100, description="The model used to generate the answer")
     firstMessage: bool = Field(default=False, description="Whether this is the first message in the thread")
+    time_took: Optional[float] = Field(None, description="Time taken to generate the answer in seconds")
 
 
 class CreateEditRequest(BaseModel):
@@ -31,6 +32,7 @@ class CreateEditRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=10000, description="The edited question text")
     answer: str = Field(..., min_length=1, max_length=50000, description="The edited answer text")
     model: str = Field(..., min_length=1, max_length=100, description="The model used to generate the edited answer")
+    time_took: Optional[float] = Field(None, description="Time taken to generate the edited answer in seconds")
 
 
 class LLMRequest(BaseModel):
@@ -268,7 +270,8 @@ async def get_conversation_history(thread_id: str, db: Session = Depends(get_db)
                 "question": conv.question,
                 "answer": conv.answer,
                 "created_at": conv.created_at.isoformat(),
-                "model": conv.model
+                "model": conv.model,
+                "time_took": conv.time_took
             }
             messages_dict[message_id]["edits"].append(edit_data)
         
@@ -364,6 +367,7 @@ async def get_message_edits(thread_id: str, message_id: str, db: Session = Depen
                 "answer": edit.answer,
                 "created_at": edit.created_at.isoformat(),
                 "model": edit.model,
+                "time_took": edit.time_took,
                 "timestamp": edit.created_at.isoformat()  # Alias for timestamp
             }
             formatted_edits.append(edit_data)
@@ -462,6 +466,7 @@ async def create_message(
             question=request.question,
             answer=request.answer,
             model=request.model,
+            time_took=request.time_took,
             created_at=datetime.utcnow()
         )
         
@@ -614,6 +619,7 @@ async def create_message_edit(
             question=request.question,
             answer=request.answer,
             model=request.model,
+            time_took=request.time_took,
             created_at=datetime.utcnow()
         )
         

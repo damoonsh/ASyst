@@ -14,7 +14,8 @@ function ChatArea({ useContext, setUseContext }) {
     { id: "smollm2:360m", name: "SmoLLM2" },
     { id: "tinyllama:latest", name: "TinyLlama" },
     { id: "qwen3:0.6b", name: "Qwen 0.6B" },
-    { id: "qwen2.5-coder:0.5b", name: "Qwen2.5-Coder" }
+    { id: "qwen2.5-coder:0.5b", name: "Qwen2.5-Coder" },
+    { id: "gemma3:270m", name: "Gemma3 270M" }
   ])
   const [selectedModel, setSelectedModel] = useState(availableModels[0].id)
   const [uploadedFiles, setUploadedFiles] = useState([])
@@ -22,6 +23,8 @@ function ChatArea({ useContext, setUseContext }) {
   const [streamingMessage, setStreamingMessage] = useState("")
   const [apiMode, setApiMode] = useState(true) // Default to real API mode
   const [tempUserMessage, setTempUserMessage] = useState(null)
+  const [generationStartTime, setGenerationStartTime] = useState(null)
+  const [currentGenerationTime, setCurrentGenerationTime] = useState(0)
 
   const [showFileUploadDialog, setShowFileUploadDialog] = useState(false)
   const [editingMessageId, setEditingMessageId] = useState(null)
@@ -65,6 +68,23 @@ function ChatArea({ useContext, setUseContext }) {
     }
   }, [currentSession, isLoading])
 
+  // Timer effect to update generation time every 0.1 seconds
+  useEffect(() => {
+    let interval = null
+    if (generationStartTime && isLoading) {
+      interval = setInterval(() => {
+        const elapsed = (Date.now() - generationStartTime) / 1000
+        setCurrentGenerationTime(elapsed)
+      }, 100) // Update every 0.1 seconds
+    } else {
+      setCurrentGenerationTime(0)
+    }
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [generationStartTime, isLoading])
+
   const handleSendMessage = async (message) => {
     if (!message.trim() || isLoading) return
 
@@ -75,6 +95,11 @@ function ChatArea({ useContext, setUseContext }) {
     // Set loading state and store the current user message for display during streaming
     setIsLoading(true)
     setStreamingMessage("")
+
+    // Start timing
+    const startTime = Date.now()
+    setGenerationStartTime(startTime)
+    setCurrentGenerationTime(0)
 
     // Store the user message temporarily for display during streaming
     setTempUserMessage({
@@ -137,6 +162,10 @@ function ChatArea({ useContext, setUseContext }) {
           },
           // On complete callback
           async (fullResponse, contextUsed = false, thinking = null) => {
+            // Calculate generation time
+            const endTime = Date.now()
+            const timeTook = (endTime - startTime) / 1000 // Convert to seconds
+
             // Determine if this is the first message in the thread
             // Only true if the session was temporary (meaning this is the very first message)
             const isFirstMessage = currentSession.isTemporary
@@ -145,7 +174,8 @@ function ChatArea({ useContext, setUseContext }) {
               messagesLength: currentSession.messages?.length,
               isFirstMessage,
               threadId,
-              actualSessionId
+              actualSessionId,
+              timeTook
             })
 
             // Create the message in the backend with the complete response
@@ -154,7 +184,8 @@ function ChatArea({ useContext, setUseContext }) {
               message,
               fullResponse,
               selectedModel,
-              isFirstMessage
+              isFirstMessage,
+              timeTook
             )
 
             // Use the thread_id to refresh the conversation
@@ -177,6 +208,8 @@ function ChatArea({ useContext, setUseContext }) {
 
             setIsLoading(false)
             setStreamingMessage("")
+            setGenerationStartTime(null)
+            setCurrentGenerationTime(0)
 
             // Keep temp message visible for a moment to ensure smooth transition
             setTimeout(() => {
@@ -205,6 +238,8 @@ function ChatArea({ useContext, setUseContext }) {
             addMessage("I'm sorry, I encountered an error processing your request.", false, selectedModel)
             setIsLoading(false)
             setStreamingMessage("")
+            setGenerationStartTime(null)
+            setCurrentGenerationTime(0)
             setTempUserMessage(null)
           }
         )
@@ -213,6 +248,8 @@ function ChatArea({ useContext, setUseContext }) {
         addMessage("I'm sorry, I encountered an error processing your request.", false, selectedModel)
         setIsLoading(false)
         setStreamingMessage("")
+        setGenerationStartTime(null)
+        setCurrentGenerationTime(0)
         setTempUserMessage(null)
       }
     } else {
@@ -281,6 +318,8 @@ function ChatArea({ useContext, setUseContext }) {
           addMessage("I'm sorry, I encountered an error processing your request.", false, selectedModel);
           setIsLoading(false);
           setStreamingMessage("");
+          setGenerationStartTime(null);
+          setCurrentGenerationTime(0);
           setTempUserMessage(null);
         },
         // Thread ID for saving the conversation
@@ -345,6 +384,11 @@ function ChatArea({ useContext, setUseContext }) {
     // Set loading state
     setIsLoading(true)
 
+    // Start timing for edit
+    const editStartTime = Date.now()
+    setGenerationStartTime(editStartTime)
+    setCurrentGenerationTime(0)
+
     try {
       if (apiMode) {
         // Use real API service with appropriate endpoint
@@ -378,12 +422,17 @@ function ChatArea({ useContext, setUseContext }) {
             },
             // On complete callback
             async (fullResponse, contextUsed = false, thinking = null) => {
+              // Calculate edit generation time
+              const editEndTime = Date.now()
+              const editTimeTook = (editEndTime - editStartTime) / 1000 // Convert to seconds
+
               // Create a new edit with the updated question and new answer
               await apiService.createMessageEdit(
                 messageToEdit.id,
                 updatedMessage,
                 fullResponse,
-                selectedModel
+                selectedModel,
+                editTimeTook
               )
 
               // Refresh the conversation to get the updated data
@@ -394,11 +443,15 @@ function ChatArea({ useContext, setUseContext }) {
               updateSessionModel(currentSession.id, selectedModel, transformedConversation.messages)
 
               setStreamingMessage("")
+              setGenerationStartTime(null)
+              setCurrentGenerationTime(0)
             },
             // On error callback
             (error) => {
               console.error("Error with LLM streaming during edit:", error)
               setStreamingMessage("")
+              setGenerationStartTime(null)
+              setCurrentGenerationTime(0)
               throw error
             }
           )
@@ -449,9 +502,13 @@ function ChatArea({ useContext, setUseContext }) {
       setEditingMessageId(null);
       setEditingMessageText("");
       setIsLoading(false);
+      setGenerationStartTime(null);
+      setCurrentGenerationTime(0);
     } catch (error) {
       console.error('Failed to submit edit:', error)
       setIsLoading(false)
+      setGenerationStartTime(null)
+      setCurrentGenerationTime(0)
     }
   }
 
@@ -474,10 +531,12 @@ function ChatArea({ useContext, setUseContext }) {
         streamingMessage={streamingMessage}
         isLoading={isLoading}
         selectedModel={selectedModel}
+        availableModels={availableModels}
         handleEditMessage={handleEditMessage}
         tempUserMessage={tempUserMessage}
         editingMessageId={editingMessageId}
         editingMessageText={editingMessageText}
+        currentGenerationTime={currentGenerationTime}
       />
 
       {/* Message input - added shrink-0 to prevent it from shrinking */}
@@ -497,6 +556,8 @@ function ChatArea({ useContext, setUseContext }) {
             availableModels={availableModels}
             useContext={useContext}
             setUseContext={setUseContext}
+            apiMode={apiMode}
+            setApiMode={setApiMode}
           />
         ) : (
           <MessageInput
@@ -510,6 +571,8 @@ function ChatArea({ useContext, setUseContext }) {
             availableModels={availableModels}
             useContext={useContext}
             setUseContext={setUseContext}
+            apiMode={apiMode}
+            setApiMode={setApiMode}
           />
         )}
       </div>

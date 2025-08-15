@@ -11,11 +11,18 @@ function ChatMessages({
   streamingMessage,
   isLoading,
   selectedModel,
+  availableModels,
   handleEditMessage,
   tempUserMessage,
   editingMessageId,
-  editingMessageText
+  editingMessageText,
+  currentGenerationTime
 }) {
+  // Function to get the human-readable model name
+  const getModelName = (modelId) => {
+    const model = availableModels?.find(m => m.id === modelId);
+    return model ? model.name : modelId;
+  };
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
       {!currentSession || (currentSession?.messages?.length === 0 && !streamingMessage) ? (
@@ -38,6 +45,7 @@ function ChatMessages({
                   isGeneratingResponse={editingMessageId === msg.id && isLoading}
                   streamingMessage={editingMessageId === msg.id ? streamingMessage : null}
                   selectedModel={selectedModel}
+                  currentGenerationTime={currentGenerationTime}
                 />
               );
             }
@@ -134,8 +142,8 @@ function ChatMessages({
                 <div className="max-w-[85%] md:max-w-[75%] rounded-lg p-3 shadow-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
                   {/* Message header */}
                   <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
-                    <span>{selectedModel}</span>
-                    <span>Generating...</span>
+                    <span>{getModelName(selectedModel)}</span>
+                    <span>Generating... {currentGenerationTime.toFixed(1)}s</span>
                   </div>
 
                   {/* Streaming content */}

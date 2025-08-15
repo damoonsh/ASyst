@@ -91,9 +91,10 @@ const apiService = {
    * @param {string} answer - The answer text
    * @param {string} model - The model used
    * @param {boolean} firstMessage - Whether this is the first message in the thread
+   * @param {number} timeTook - Time taken to generate the answer in seconds
    * @returns {Promise} Promise that resolves to the created message with backend-generated IDs
    */
-  createMessage: async (threadId, question, answer, model, firstMessage = false) => {
+  createMessage: async (threadId, question, answer, model, firstMessage = false, timeTook = null) => {
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${threadId}/`, {
         method: 'POST',
@@ -104,7 +105,8 @@ const apiService = {
           question,
           answer,
           model,
-          firstMessage
+          firstMessage,
+          time_took: timeTook
         })
       })
       return await handleResponse(response)
@@ -120,9 +122,10 @@ const apiService = {
    * @param {string} question - The edited question text
    * @param {string} answer - The edited answer text
    * @param {string} model - The model used
+   * @param {number} timeTook - Time taken to generate the edited answer in seconds
    * @returns {Promise} Promise that resolves to the created edit with backend-generated edit_id
    */
-  createMessageEdit: async (messageId, question, answer, model) => {
+  createMessageEdit: async (messageId, question, answer, model, timeTook = null) => {
     try {
       const response = await fetch(`${API_BASE_URL}/conversations/${messageId}/edits`, {
         method: 'POST',
@@ -132,7 +135,8 @@ const apiService = {
         body: JSON.stringify({
           question,
           answer,
-          model
+          model,
+          time_took: timeTook
         })
       })
       return await handleResponse(response)
@@ -176,7 +180,8 @@ const apiService = {
             timestamp: edit.created_at,
             question: edit.question,
             answer: processed.content,
-            thinking: processed.thinking
+            thinking: processed.thinking,
+            time_took: edit.time_took
           };
         })
       }))

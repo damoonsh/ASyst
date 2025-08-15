@@ -13,7 +13,8 @@ function ConversationMessage({
   editingText = null,
   isGeneratingResponse = false,
   streamingMessage = null,
-  selectedModel = null
+  selectedModel = null,
+  currentGenerationTime = 0
 }) {
   const [currentEditIndex, setCurrentEditIndex] = useState(message.edits.length - 1);
   const currentEdit = message.edits[currentEditIndex];
@@ -182,7 +183,18 @@ function ConversationMessage({
             {/* Message header */}
             <div className="flex justify-between items-center mb-1 text-xs text-gray-500 dark:text-gray-400">
               <span>{isGeneratingResponse && selectedModel ? selectedModel : currentEdit.model_name}</span>
-              <span>{isGeneratingResponse ? "Generating..." : formattedTime}</span>
+              <div className="flex items-center gap-2">
+                {isGeneratingResponse ? (
+                  <span>Generating... {currentGenerationTime.toFixed(1)}s</span>
+                ) : (
+                  <>
+                    {currentEdit.time_took && (
+                      <span className="text-gray-400">({currentEdit.time_took.toFixed(1)}s)</span>
+                    )}
+                    <span>{formattedTime}</span>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Answer content */}

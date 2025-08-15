@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Index, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -43,6 +43,7 @@ class Conversation(Base):
     answer = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=func.current_timestamp())
     model = Column(String(100), nullable=False)
+    time_took = Column(Float, nullable=True)  # Time in seconds for answer generation
     
     # Relationships
     thread = relationship("Thread", back_populates="conversations")

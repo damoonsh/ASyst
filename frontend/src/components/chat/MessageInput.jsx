@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { FiSend, FiPaperclip, FiX, FiCheck, FiUpload, FiCpu, FiLayers } from 'react-icons/fi'
+import { FiSend, FiPaperclip, FiX, FiCheck, FiUpload, FiCpu, FiLayers, FiArrowUp, FiSettings, FiSun, FiMoon, FiWifi, FiWifiOff } from 'react-icons/fi'
+import { useTheme } from '../../context/ThemeContext'
 
-function MessageInput({ 
-  onSendMessage, 
-  isLoading, 
-  onToggleFileUpload, 
-  hasFiles = false, 
+function MessageInput({
+  onSendMessage,
+  isLoading,
+  onToggleFileUpload,
+  hasFiles = false,
   isEditing = false,
   initialMessage = '',
   onCancelEdit,
@@ -14,20 +15,24 @@ function MessageInput({
   setSelectedModel,
   availableModels,
   useContext,
-  setUseContext
+  setUseContext,
+  apiMode,
+  setApiMode
 }) {
   const [message, setMessage] = useState(initialMessage)
   const [isDragOver, setIsDragOver] = useState(false)
   const [attachedFiles, setAttachedFiles] = useState([])
   const [showModelDropdown, setShowModelDropdown] = useState(false)
-  const [showContextDropdown, setShowContextDropdown] = useState(false)
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false)
   const [contextModel, setContextModel] = useState(selectedModel)
+  const { theme, toggleTheme } = useTheme()
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const dragCounterRef = useRef(0)
   const modelDropdownRef = useRef(null)
-  const contextDropdownRef = useRef(null)
-  
+  const settingsDropdownRef = useRef(null)
+
+
   // Auto-resize textarea function
   const autoResize = () => {
     const textarea = textareaRef.current
@@ -55,8 +60,8 @@ function MessageInput({
       if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target)) {
         setShowModelDropdown(false)
       }
-      if (contextDropdownRef.current && !contextDropdownRef.current.contains(event.target)) {
-        setShowContextDropdown(false)
+      if (settingsDropdownRef.current && !settingsDropdownRef.current.contains(event.target)) {
+        setShowSettingsDropdown(false)
       }
     }
 
@@ -134,9 +139,9 @@ function MessageInput({
       type: file.type,
       file: file
     }))
-    
+
     setAttachedFiles(prev => [...prev, ...newFiles])
-    
+
     // If onFileUpload is provided, call it for each file
     if (onFileUpload) {
       files.forEach(file => {
@@ -175,7 +180,7 @@ function MessageInput({
   }
 
   return (
-    <div 
+    <div
       className={`relative p-4 border-t border-gray-200 dark:border-gray-700 ${isEditing ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -224,155 +229,172 @@ function MessageInput({
         </div>
       )}
 
+      {/* Main input row */}
       <div className="flex items-end gap-2 max-w-4xl mx-auto relative">
-        {/* Model Selector */}
-        {selectedModel && availableModels && (
-          <div className="relative flex flex-col items-center" ref={modelDropdownRef}>
-            {/* Model selector icon button */}
-            <button
-              onClick={() => setShowModelDropdown(!showModelDropdown)}
-              className="p-3 rounded-full transition-colors self-end text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Select model"
-            >
-              <FiCpu size={20} />
-            </button>
+        {/* Left side - Settings button */}
+        <div className="relative flex flex-col items-center" ref={modelDropdownRef}>
+          <button
+            onClick={() => setShowModelDropdown(!showModelDropdown)}
+            className="p-3 rounded-lg transition-colors self-end text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600"
+            aria-label="Settings"
+          >
+            <FiCpu size={20} />
+          </button>
 
-            {/* Dropdown menu */}
-            {showModelDropdown && (
-              <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 min-w-[200px]">
-                <div className="py-1">
-                  {availableModels.map(model => (
-                    <button
-                      key={model.id}
-                      onClick={() => {
-                        setSelectedModel(model.id)
-                        setShowModelDropdown(false)
-                      }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                        selectedModel === model.id 
-                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' 
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {model.name}
-                    </button>
-                  ))}
+          {/* Settings dropdown */}
+          {showModelDropdown && (
+            <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 min-w-[250px]">
+              <div className="py-2">
+                {/* Model Selection */}
+                <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                  Model
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Context Management */}
-        {setUseContext && availableModels && (
-          <div className="relative flex flex-col items-center" ref={contextDropdownRef}>
-            {/* Context selector icon button */}
-            <button
-              onClick={() => setShowContextDropdown(!showContextDropdown)}
-              className={`p-3 rounded-full transition-colors self-end ${
-                useContext 
-                  ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              aria-label="Context model selector"
-            >
-              <FiLayers size={20} />
-            </button>
-
-            {/* Context Dropdown menu */}
-            {showContextDropdown && (
-              <div className="absolute bottom-full mb-2 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 min-w-[200px]">
-                <div className="py-1">
-                  <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
-                    Context Settings
-                  </div>
+                {availableModels.map(model => (
                   <button
+                    key={model.id}
                     onClick={() => {
-                      setUseContext(!useContext)
-                      setShowContextDropdown(false)
+                      setSelectedModel(model.id)
+                      setShowModelDropdown(false)
                     }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${selectedModel === model.id
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                      : 'text-gray-700 dark:text-gray-300'
+                      }`}
                   >
-                    {useContext ? '✓ Context Enabled' : '○ Context Disabled'}
+                    {model.name}
                   </button>
-                  <div className="border-t border-gray-200 dark:border-gray-600 mt-1 pt-1">
-                    <div className="px-4 py-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      Context Model
-                    </div>
-                    {availableModels.map(model => (
+                ))}
+
+                {/* Context Settings */}
+                {setUseContext && (
+                  <>
+                    <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2">
+                      <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                        Context
+                      </div>
                       <button
-                        key={model.id}
                         onClick={() => {
-                          setContextModel(model.id)
-                          setShowContextDropdown(false)
+                          setUseContext(!useContext)
                         }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                          contextModel === model.id 
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' 
-                            : 'text-gray-700 dark:text-gray-300'
-                        }`}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                       >
-                        {model.name}
+                        {useContext ? '✓ Context Enabled' : '○ Context Disabled'}
                       </button>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        {!isEditing ? (
-          <button
-            onClick={handlePaperclipClick}
-            className={`p-3 rounded-full transition-colors self-end ${hasFiles || attachedFiles.length > 0
-                ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            aria-label="Attach files"
-          >
-            <FiPaperclip size={20} />
-          </button>
-        ) : (
-          <button
-            onClick={onCancelEdit}
-            className="p-3 rounded-full transition-colors self-end text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-            aria-label="Cancel edit"
-          >
-            <FiX size={20} />
-          </button>
-        )}
-
+        {/* Text input */}
         <textarea
           ref={textareaRef}
           value={message}
           onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
-          placeholder={isEditing ? "Edit your message..." : "Type your message..."}
-          className={`flex-1 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:border-transparent ${
-            isEditing 
-              ? 'border-yellow-300 dark:border-yellow-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-yellow-500' 
-              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-primary-500'
-          }`}
+          placeholder={isEditing ? "Edit your message..." : "Ask a follow-up..."}
+          className={`flex-1 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:border-transparent ${isEditing
+            ? 'border-yellow-300 dark:border-yellow-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-yellow-500'
+            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-primary-500'
+            }`}
           rows={1}
           style={{ minHeight: '44px', maxHeight: '200px', height: '44px' }}
           autoFocus={isEditing}
         />
 
-        <button
-          onClick={handleSendMessage}
-          disabled={!message.trim() || isLoading}
-          className={`p-3 rounded-full self-end ${
-            !message.trim() || isLoading
+        {/* Right side buttons */}
+        <div className="flex items-center gap-1">
+          {!isEditing ? (
+            <>
+              <button
+                onClick={handlePaperclipClick}
+                className={`p-3 rounded-lg transition-colors ${hasFiles || attachedFiles.length > 0
+                  ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                aria-label="Attach files"
+              >
+                <FiPaperclip size={20} />
+              </button>
+
+              {/* Settings button */}
+              <div className="relative" ref={settingsDropdownRef}>
+                <button
+                  onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                  className="p-3 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  aria-label="Settings"
+                >
+                  <FiSettings size={20} />
+                </button>
+
+                {/* Settings dropdown */}
+                {showSettingsDropdown && (
+                  <div className="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 min-w-[200px]">
+                    <div className="py-2">
+                      {/* API Mode Toggle */}
+                      {setApiMode && (
+                        <>
+                          <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                            Connection
+                          </div>
+                          <button
+                            onClick={() => {
+                              setApiMode(!apiMode)
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                          >
+                            {apiMode ? <FiWifi size={16} /> : <FiWifiOff size={16} />}
+                            {apiMode ? 'Online Mode' : 'Offline Mode'}
+                          </button>
+                          <div className="border-t border-gray-200 dark:border-gray-600 mt-2 pt-2">
+                            <div className="px-4 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                              Appearance
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Theme Toggle */}
+                      <button
+                        onClick={() => {
+                          toggleTheme()
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                      >
+                        {theme === 'dark' ? <FiSun size={16} /> : <FiMoon size={16} />}
+                        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <button
+              onClick={onCancelEdit}
+              className="p-3 rounded-lg transition-colors text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+              aria-label="Cancel edit"
+            >
+              <FiX size={20} />
+            </button>
+          )}
+
+          <button
+            onClick={handleSendMessage}
+            disabled={!message.trim() || isLoading}
+            className={`p-3 rounded-lg ${!message.trim() || isLoading
               ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               : isEditing
                 ? 'bg-yellow-500 text-white hover:bg-yellow-600'
                 : 'bg-primary-600 text-white hover:bg-primary-700'
-          } transition-colors`}
-          aria-label={isEditing ? "Save edit" : "Send message"}
-        >
-          {isEditing ? <FiCheck size={20} /> : <FiSend size={20} />}
-        </button>
+              } transition-colors`}
+            aria-label={isEditing ? "Save edit" : "Send message"}
+          >
+            {isEditing ? <FiCheck size={20} /> : <FiArrowUp size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* Hidden file input */}
